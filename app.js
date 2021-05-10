@@ -1,21 +1,22 @@
-import fs, { link } from "fs";
+import fs from "fs";
 
 import captureWebsite from 'capture-website';
 import fetch from 'node-fetch';
 import fsExtra from 'fs-extra';
 import JSZip from "jszip";
 import nodemailer from "nodemailer";
-import sendgridTransport from "nodemailer-sendgrid-transport";
 
-const transporter = nodemailer.createTransport(sendgridTransport({
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
     auth: {
-        api_key: "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"
+        user: 'webscreenshot.sender@gmail.com',
+        pass: 'johncube123'
     }
-}));
+});
 
-async function app(link = "https://pawel-dyl.netlify.app/", mailAdress = "hakiros54@gmail.com"){
+export default async function app(link = "https://www.youtube.com/", mailAdress = "marcin.complak@johncube.pl"){
     const zipName = "images";
-    const dirPath = "images";
+    const dirPath = "public/images";
     const emailTitle = "promised images";
 
     //checking whether link is correct.
@@ -23,21 +24,21 @@ async function app(link = "https://pawel-dyl.netlify.app/", mailAdress = "hakiro
         await fetch(link);
     }
     catch{
-        console.log("wrong link");
         return false;
     }
 
     clearDirectory(dirPath);
-    await createImages(link);
+    const imageNames = await createImages(link);
     await zipImages();
-    emailWithFile(emailTitle, mailAdress, `images/${zipName}.zip`);
+    emailWithFile(emailTitle, mailAdress, `public/images/${zipName}.zip`);
+    return imageNames;
 }
 
 function clearDirectory(path){
     fsExtra.emptyDirSync(path);
 }
 
-function createImages(link){
+async function createImages(link){
     const imagesResolutions = [
         {
             width: 1920,
@@ -53,15 +54,18 @@ function createImages(link){
         }
     ]
     const photoPromises = [];
+    const imageNames = [];
     let path;
 
     for(let i = 0; i < imagesResolutions.length; i++){
-        path = `images/image${i+1}.jpg`;
+        path = `public/images/image${i+1}.jpg`;
+        imageNames.push(`image${i+1}.jpg`);
         photoPromises.push(
             createImage(link, path, imagesResolutions[i]["width"], imagesResolutions[i]["height"])
         );
     }
-    return Promise.all(photoPromises);
+    await Promise.all(photoPromises);
+    return imageNames;
 }
 
 async function createImage(link, path, width, height){
@@ -75,21 +79,21 @@ async function createImage(link, path, width, height){
 
 async function zipImages(){
     const zip = new JSZip();
+
     let i = 1;
-    while(fs.existsSync(`images/image${i}.jpg`)){
-        zip.file(`image${i}.jpg`, fs.readFileSync(`images/image${i}.jpg`),{base64: true});
+    while(fs.existsSync(`public/images/image${i}.jpg`)){
+        zip.file(`image${i}.jpg`, fs.readFileSync(`public/images/image${i}.jpg`),{base64: true});
         i++;
     }
     if(i === 1){
         return;
     }
-    const content = await zip.generateAsync({type: "nodebuffer"});
 
-    fs.writeFileSync("images/images.zip",content);
+    const content = await zip.generateAsync({type: "nodebuffer"});
+    fs.writeFileSync("public/images/images.zip",content);
 }
 
 function emailWithFile(emailTitle, mailAdress, path){
-    console.log("sending email");
     transporter.sendMail({
         from: "webscreenshot.sender@gmail.com",
         to: mailAdress,
@@ -102,21 +106,3 @@ function emailWithFile(emailTitle, mailAdress, path){
         ]
     })
 }
-
-
-app();
-
-//createImage("asdd", "images/image.jpg",720,480);
-
-
-/*
-server - obsługuje 
-/ - zwraca strone z inputem który prowadzi do create-photos, do tego warunkowo wyświetla zdjęcia (lub jest tam js który pyta o te zdjęcia)
-/create-photos wywołuje funkcję która tworzy zdjęcia i przekierowuje użytkownika do / jeśli nie udało się stworzyć zdjęć to zwraca informacje z błędem
-
-
-
-app(link = "asddsada") robi zdjęcia, pakuje je do zipa, wysyła pocztą
-
-createImage(link, width, height) - tworzy zdjęcie, zwraca promisa, jak się udało stworzyć zdjęcie to resolve - inaczej reject. 
-*/

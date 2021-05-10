@@ -1,0 +1,23 @@
+*{
+    margin:0;
+    padding:0;
+}
+.container{
+    width:100%;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+form{
+    text-align: center;
+    margin:50px;
+}
+img{
+    max-width: 80%;
+    margin:20px;
+}
+.incorrect-url{
+    color:red;
+}
